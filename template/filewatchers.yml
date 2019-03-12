@@ -1,0 +1,12 @@
+- :pattern: '**/{Gemfile,*.{rb,ru,y{a,}ml}}'
+  :exclude: '**/{spec/**/*,config/**/*.example*}'
+  :command: bundle exec pumactl restart -F config/puma.rb
+
+# - :pattern: 'assets/styles/**/*'
+#   :command: yarn build:styles
+#
+# - :pattern: '{assets/scripts/**/*,{.babelrc,webpack.config.js}}'
+#   :command: yarn build:scripts
+#
+# - :pattern: 'package.json'
+#   :command: yarn install && yarn build:scripts

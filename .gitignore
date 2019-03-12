@@ -1,0 +1,8 @@
+Gemfile.lock
+.ruby-version
+
+# Gem files
+*.gem
+
+# Tests coverage
+coverage/

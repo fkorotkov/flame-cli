@@ -1,0 +1,96 @@
+# frozen_string_literal: true
+
+source 'https://rubygems.org'
+
+## https://github.com/bundler/bundler/issues/4978
+git_source(:github) { |name| "https://github.com/#{name}.git" }
+
+group :system do
+	gem 'bundler'
+	gem 'gorilla_patch', github: 'AlexWayfer/gorilla_patch'
+	# gem 'httpx'
+	gem 'memery'
+	# gem 'rubyzip'
+end
+
+group :server do
+	gem 'flame', github: 'AlexWayfer/flame'
+	gem 'flame-flash', github: 'AlexWayfer/flame-flash'
+	gem 'puma'
+	gem 'rack-protection-maximum_cookie'
+	gem 'rack-slashenforce'
+	gem 'rack-utf8_sanitizer'
+	gem 'rack_csrf', require: 'rack/csrf'
+end
+
+group :development do
+	gem 'filewatcher'
+	gem 'pry-byebug'
+end
+
+group :linter do
+	gem 'bundler-audit'
+	gem 'rubocop'
+end
+
+# group :database do
+# 	gem 'pg'
+# 	gem 'sequel'
+# 	gem 'sequel-enum_values', require: 'sequel/plugins/enum_values'
+# 	gem 'sequel_pg', require: 'sequel'
+# 	gem 'sequel_secure_password'
+# end
+
+# group :translations do
+# 	gem 'flame-r18n', github: 'AlexWayfer/flame-r18n'
+# 	gem 'r18n-core'
+# end
+
+# group :forms do
+# 	gem 'formalism', github: 'AlexWayfer/formalism'
+# end
+
+group :views do
+	gem 'erubi', require: 'tilt/erubi'
+end
+
+# group :mails do
+# 	gem 'email_address'
+# 	gem 'mail'
+# end
+
+## assets
+# gem 'sass'
+
+# group :test do
+# 	gem 'page-object'
+# 	gem 'rspec'
+# 	gem 'watir-rspec'
+# end
+
+group :others do
+	# gem 'faker'
+	# gem 'kramdown'
+	# gem 'retries',
+	# 	## https://github.com/ooyala/retries/pull/9
+	# 	github: 'AlexWayfer/retries', branch: 'v2'
+	# gem 'sentry-raven'
+	# gem 'voight_kampff', github: 'AlexWayfer/Voight-Kampff', branch: 'v2'
+	# gem 'shrine'
+end
+
+group :rake do
+	gem 'configs_rake', github: 'AlexWayfer/configs_rake'
+	gem 'pry'
+	gem 'pry-doc'
+	# gem 'psql_rake', github: 'AlexWayfer/psql_rake'
+	gem 'rack-console'
+	gem 'rake'
+	gem 'rake_helpers', github: 'AlexWayfer/rake_helpers'
+	# gem 'sequel_rake', github: 'AlexWayfer/sequel_rake'
+end
+
+# group :benchmark do
+# 	gem 'benchmark-ips'
+# 	gem 'benchmark-memory'
+# end

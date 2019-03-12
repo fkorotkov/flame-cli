@@ -1,0 +1,27 @@
+# frozen_string_literal: true
+
+require 'yaml'
+
+## Database initialize for Sequel
+module <%= @module_name %>
+	database_config_file = File.join(__dir__, 'database.yaml')
+	if File.exist?(database_config_file)
+		Sequel::Model.plugin :timestamps
+		Sequel::Model.plugin :json_serializer
+		Sequel::Model.raise_on_save_failure = false
+		Sequel::Model.default_association_options = {
+			class_namespace: '<%= @short_module_name %>::Models'
+		}
+
+		database_config = YAML.load_file(database_config_file)
+		env_db_name = ENV['DB_NAME']
+		database_config[:database] = env_db_name if env_db_name
+		DB = Sequel.connect database_config
+
+
+		DB.extension :error_sql
+		# DB.extension :pg_enum
+		# DB.extension :pg_json
+		# DB.extension :pg_timestamptz
+	end
+end

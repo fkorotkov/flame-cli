@@ -1,0 +1,273 @@
+# frozen_string_literal: true
+
+require 'bundler/setup'
+Bundler.setup :rake, :database
+
+require 'memery'
+require 'rake_helpers'
+require 'yaml'
+require 'pry-byebug' ## for `binding.pry` debugging
+
+module <%= @module_name %>
+	## Class with Rake DSL for project
+	class RakeTasks
+		include Rake::DSL
+		include RakeHelpers
+		include Memery
+
+		CONFIGS_DIR = File.join(__dir__, 'config')
+
+		def initialize
+			define_spec_task
+
+			define_console_task
+
+			define_configs_tasks
+
+			define_db_namespace
+
+			define_locales_namespace
+
+			define_static_namespace
+
+			define_update_task
+
+			define_deploy_task
+		end
+
+		private
+
+		def define_spec_task
+			begin
+				require 'rspec/core/rake_task'
+				RSpec::Core::RakeTask.new(:spec)
+			rescue LoadError
+				puts 'RSpec is not available'
+			end
+
+			task default: :spec
+		end
+
+		def define_console_task
+			task :console do
+				require 'pry'
+				require_relative 'main'
+
+				Pry.start
+			end
+		end
+
+		def define_configs_tasks
+			require 'configs_rake'
+
+			ConfigsRake.new
+		end
+
+		memoize def db_config
+			db_config_file = File.join(CONFIGS_DIR, 'database.yaml')
+
+			return unless File.exist? db_config_file
+
+			db_config = YAML.load_file db_config_file
+
+			env_db_name = ENV['DB_NAME']
+			db_config[:database] = env_db_name if env_db_name
+
+			db_config
+		end
+
+		memoize def db_connection
+			return unless db_config
+
+			require 'sequel'
+
+			Sequel.connect db_config
+		end
+
+		def define_db_namespace
+			namespace :db do
+				return unless db_connection
+
+				require 'sequel_rake'
+
+				SequelRake.new(db_connection)
+
+				require 'psql_rake'
+
+				PSQLRake.new(db_config)
+			end
+
+			alias_task :psql, 'db:psql'
+		end
+
+		## Class for Locale file
+		class Locale
+			attr_reader :code, :hash
+
+			EXT = '.yaml'
+
+			def self.load(locales_dir = 'locales')
+				Dir[File.join(__dir__, locales_dir, "*#{EXT}")].map do |file|
+					new File.basename(file, EXT), YAML.load_file(file)
+				end
+			end
+
+			def initialize(code, hash)
+				@code = code
+				@hash = hash
+			end
+
+			class HashCompare
+				def initialize(hash, other_hash)
+					@hash = hash
+					@other_hash = other_hash
+					@diff = {}
+				end
+
+				def different_keys
+					@hash.each_pair do |key, value|
+						other_value = @other_hash[key]
+						if value.is_a?(Hash) && other_value.is_a?(Hash)
+							add_differences_in_hash(value, other_value, key)
+						elsif value.is_a?(Array) && other_value.is_a?(Array)
+							add_differences_in_array(value, other_value, key)
+						elsif other_value.nil? || value.class != other_value.class
+							add_difference(value, key)
+						end
+					end
+					@diff
+				end
+
+				private
+
+				def add_difference(difference, key)
+					@diff[key] = difference unless difference.empty?
+				end
+
+				def add_differences_in_hash(hash, other_hash, key)
+					difference = self.class.new(hash, other_hash).different_keys
+					add_difference(difference, key)
+				end
+
+				def add_differences_in_array(array, other_array, key)
+					difference =
+						if array.size != other_array.size
+							array
+						else
+							differences_in_array(array, other_array)
+						end
+					add_difference(difference, key)
+				end
+
+				def differences_in_array(array, other_array)
+					array.each_with_object([]).with_index do |(object, diff), i|
+						other_object = other_array[i]
+						if object.is_a?(Hash) && other_object.is_a?(Hash)
+							difference = self.class.new(object, other_object).different_keys
+							diff << difference unless difference.empty?
+						end
+					end.compact
+				end
+			end
+
+			def diff(other)
+				HashCompare.new(hash, other.hash).different_keys
+			end
+		end
+
+		def define_locales_namespace
+			namespace :locales do
+				crowdin_config_file = File.join(CONFIGS_DIR, 'crowdin.yaml')
+
+				desc 'Upload files for translation'
+				task :upload do
+					sh "crowdin --config #{crowdin_config_file} upload sources"
+				end
+
+				desc 'Download translated files'
+				task :download do
+					sh "crowdin --config #{crowdin_config_file} download translations"
+				end
+
+				desc 'Check locales'
+				task :check do
+					require 'yaml'
+					require 'json'
+
+					locales = Locale.load
+
+					def compare_locales(locale, other_locale)
+						puts "#{locale.code.upcase} -> #{other_locale.code.upcase}:\n\n"
+						puts locale.diff(other_locale).to_yaml
+					end
+
+					locales.each_with_index do |locale, ind|
+						locales[ind..-1].each do |other_locale|
+							next if locale == other_locale
+							compare_locales(locale, other_locale)
+							compare_locales(other_locale, locale)
+						end
+					end
+				end
+			end
+		end
+
+		def define_static_namespace
+			namespace :static do
+				desc 'Check static files'
+				task :check do
+					Dir[File.join(__dir__, 'public/**/*')].each do |file|
+						basename = File.basename(file)
+						grep_options = '--exclude-dir={\.git,log} --color=always'
+						found = `grep -ir '#{basename}' ./ #{grep_options}`
+						next unless found.empty? && File.dirname(file) != @skipping_dir
+						filename = file.sub(__dir__, '')
+						case Question.new("Delete #{filename} ?", %w[yes no skip]).answer
+						when 'yes'
+							`git rm #{file.gsub(' ', '\ ')}`
+						when 'skip'
+							@skipping_dir = File.dirname(file)
+						end
+					end
+				end
+			end
+		end
+
+		def define_update_task
+			## Command for update service
+			desc 'Update from git'
+			task :update, :branch do |_t, args|
+				current_branch = `git branch | grep -e "^*" | cut -d' ' -f 2`.strip
+				args.with_defaults(branch: current_branch)
+
+				server = './server'
+
+				sh "#{server} stop"
+
+				sh "git checkout #{args.branch}"
+				sh "git pull origin #{args.branch}"
+
+				sh 'bundle check || bundle install'
+				sh 'rake configs:check'
+				sh 'rake db:migrate'
+				# sh 'yarn install'
+				# sh 'yarn build'
+				sh "#{server} start"
+			end
+		end
+
+		def define_deploy_task
+			## Command for deploy code from git to servers
+			desc 'Deploy to servers'
+			task :deploy do
+				servers = YAML.load_file File.join(CONFIGS_DIR, 'deploy.yaml')
+				servers.each do |server|
+					update_command = "cd #{server[:path]} && rake update"
+					sh "ssh -t #{server[:ssh]} 'bash --login -c \"#{update_command}\"'"
+				end
+			end
+		end
+	end
+end
+
+<%= @module_name %>::RakeTasks.new

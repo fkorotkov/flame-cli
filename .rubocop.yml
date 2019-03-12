@@ -1,0 +1,20 @@
+Layout/Tab:
+  Enabled: false
+  IndentationWidth: 2
+Layout/IndentationWidth:
+  Width: 1
+Layout/MultilineMethodCallIndentation:
+  EnforcedStyle: indented
+Layout/AlignParameters:
+  EnforcedStyle: with_fixed_indentation
+
+Style/ParenthesesAroundCondition:
+  AllowInMultilineConditions: true
+
+AllCops:
+  TargetRubyVersion: 2.3
+
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/**/*'
+    - '*.gemspec'
