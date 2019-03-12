@@ -21,6 +21,8 @@ Gem::Specification.new do |s|
 		'wiki_uri' => 'https://github.com/AlexWayfer/flame-cli/wiki'
 	}
 
+	s.required_ruby_version = '>= 2.4.0'
+
 	s.add_runtime_dependency 'clamp', '~> 1.3'
 	s.add_runtime_dependency 'gorilla_patch', '~> 3.0'
 
