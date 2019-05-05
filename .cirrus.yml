@@ -5,7 +5,7 @@ bundle_cache: &bundle_cache
       echo $CIRRUS_TASK_NAME:$CIRRUS_OS:$RUBY_VERSION &&
       cat Gemfile &&
       cat flame-cli.gemspec
-    populate_script: bundle update
+    populate_script: bundle install
 
 test_task:
   container:
