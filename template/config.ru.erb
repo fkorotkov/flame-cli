@@ -4,6 +4,21 @@ environment = ENV['RACK_ENV'].to_sym
 
 is_development = environment == :development
 
+module <%= @module_name %>
+	APP_DIRS = %w[
+		configs
+		libs
+		models
+		# policies
+		helpers
+		# mailers
+		# actions
+		forms
+		# view_objects
+		controllers
+	].freeze
+end
+
 ## Require gems
 require 'bundler/setup'
 Bundler.require(
@@ -12,12 +27,25 @@ Bundler.require(
 	environment
 )
 
+require 'erubi/capture_end'
+# require 'voight_kampff/rack_request'
+
 ## Require libs
+
+### For $RS constant:
+### http://ruby-doc.org/stdlib/libdoc/English/rdoc/English.html
+require 'English'
+
+require 'logger'
+
+### For PP.pp (differs from `pp` by arguments (width))
+require 'pp'
+
 # require 'money/bank/google_currency'
 
 ## Require dirs
 Flame::Application.require_dirs(
-	%w[config lib models helpers exports mailers services controllers]
+	<%= @module_name %>::APP_DIRS
 )
 
 ## Require application
@@ -28,31 +56,24 @@ if <%= @short_module_name %>::Application.config[:session]
 	use Rack::Session::Cookie, <%= @short_module_name %>::Application.config[:session][:cookie]
 end
 
-## Logger
-require 'logger'
-logs_dir = File.join(
-	__dir__,
-	<%= @short_module_name %>::Application.config[:server][environment.to_s][:logs_dir]
-)
-
-<%= @short_module_name %>::Application.config[:logger] = Logger.new(
-	is_development ? $stdout : File.join(logs_dir, 'stdout'),
-	'weekly'
-)
+## Middleware for exceptions about too large cookies
+use Rack::Protection::MaximumCookie
 
 ## Access Logger
-unless is_development
-	use Rack::CommonLogger, Logger.new(
-		File.join(logs_dir, 'access'),
-		'weekly'
-	)
-end
+use Rack::CommonLogger, Logger.new(
+	if is_development
+		$stdout
+	else
+		File.join(<%= @short_module_name %>::Application.config[:logs_dir], 'access')
+	end,
+	'daily'
+)
 
 if <%= @short_module_name %>.const_defined?(:DB)
 	## SQL Logger
 	if is_development
 		<%= @short_module_name %>::DB.loggers <<
-			if ENV['RACK_CONSOLE_INTRO']
+			if ENV['RACK_CONSOLE']
 				Logger.new($stdout)
 			else
 				<%= @short_module_name %>.logger
@@ -60,7 +81,12 @@ if <%= @short_module_name %>.const_defined?(:DB)
 	end
 
 	## Freeze DB (not for `rake console`)
-	<%= @short_module_name %>::DB.freeze unless ENV['RACK_CONSOLE_INTRO']
+	<%= @short_module_name %>::DB.freeze unless ENV['RACK_CONSOLE']
+end
+
+## Aliases for rack-console
+if ENV['RACK_CONSOLE']
+	# <%= @short_module_name %>::Acc = <%= @short_module_name %>::Account
 end
 
 ## Remove invalid UTF-8 characters from requests
@@ -69,8 +95,12 @@ use Rack::UTF8Sanitizer
 ## Remove trailing slashes from request path (and redirect)
 # use Rack::RemoveTrailingSlashes
 
+## Parse body as pointed out in Content-type
+use Rack::PostBodyContentTypeParser
+
 ## CSRF
-# use Rack::Csrf, raise: is_development
+## Rescued and reported by `lowlevel_error_handler` in Puma config
+use Rack::Csrf, raise: true
 
 ## Run application
 run <%= @short_module_name %>::Application

@@ -1,0 +1,27 @@
+# frozen_string_literal: true
+
+module <%= @module_name %>
+	module Config
+		## Logger configuration
+		module Logger
+			def self.included(app)
+				app.config[:logs_dir] = File.join(
+					app.config[:root_dir],
+					app.config[:server][app.config[:environment]][:logs_dir]
+				)
+				app.config[:logger] = initialize_logger(app)
+			end
+
+			def self.initialize_logger(app)
+				::Logger.new(
+					if app.config[:environment] == 'development'
+						$stdout
+					else
+						File.join(app.config[:logs_dir], 'stdout')
+					end,
+					'daily'
+				)
+			end
+		end
+	end
+end

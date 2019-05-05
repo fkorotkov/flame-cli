@@ -1,14 +1,14 @@
 # configuration
-config/**/*
-!config/**/*.example*
-!config/**/*.rb
-!config/**/*.erb
-!config/nginx
-!config/nginx/snippets
-!config/nginx/snippets/*.example*
-!config/nginx/snippets/ssl-params.conf
-!config/nginx/sites
-!config/nginx/sites/*.example*
+configs/**/*
+!configs/**/*.example*
+!configs/**/*.rb
+!configs/**/*.erb
+!configs/nginx
+!configs/nginx/snippets
+!configs/nginx/snippets/*.example*
+!configs/nginx/snippets/ssl-params.conf
+!configs/nginx/sites
+!configs/nginx/sites/*.example*
 
 # temp
 .sass-cache/

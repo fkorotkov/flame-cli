@@ -49,12 +49,17 @@ module <%= @module_name %>
 		end
 
 		def define_console_task
-			task :console do
-				require 'pry'
-				require_relative 'main'
+			desc 'Start interactive console'
+			task :console, :environment do |_t, args|
+				require 'rack/console'
 
-				Pry.start
+				args.with_defaults(environment: 'development')
+
+				ARGV.clear
+				ENV['RACK_CONSOLE'] = 'true'
+				Rack::Console.new(args).start
 			end
+			alias_task :c, :console
 		end
 
 		def define_configs_tasks

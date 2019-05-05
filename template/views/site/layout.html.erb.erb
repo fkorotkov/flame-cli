@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="utf-8" />
-		<title><%= "\<%= #{@short_module_name}::SITE_NAME %\>" %></title>
+		<title><%= "\<%= #{@short_module_name}::Application.config[:site][:site_name] %\>" %></title>
 	</head>
 	<body>
 		<%= "\<%= yield %\>" %>

@@ -49,7 +49,26 @@ worker_timeout env_config[:daemonize] ? 15 : 1_000_000
 threads 0, env_config[:threads_count] || 4
 daemonize env_config[:daemonize]
 
-# bind 'unix://tmp/sockets/puma.sock'
+lowlevel_error_handler do |exception, env|
+	# request_context = Raven::RequestContext.new(
+	# 	:puma, env: env, exception: exception
+	# )
+	# Raven.capture_exception(
+	# 	*request_context.exception_with_context
+	# )
+	## Rack response
+	[
+		500,
+		{},
+		[
+			<<~BODY
+				An error has occurred, and engineers have been informed. Please reload the page. If you continue to have problems, contact us.
+			BODY
+		]
+	]
+end
+
+# bind 'unix://' + File.join(%w[tmp sockets puma.sock])
 env_config[:binds].each do |type, value|
 	value = "#{value[:host]}:#{value[:port]}" if type == :tcp
 	FileUtils.mkdir_p File.join(root_dir, File.dirname(value)) if type == :unix

@@ -1,6 +1,6 @@
 - :pattern: '**/{Gemfile,*.{rb,ru,y{a,}ml}}'
-  :exclude: '**/{spec/**/*,config/**/*.example*}'
-  :command: bundle exec pumactl restart -F config/puma.rb
+  :exclude: '**/{spec/**/*,configs/**/*.example*}'
+  :command: bundle exec pumactl restart -F configs/puma.rb
 
 # - :pattern: 'assets/styles/**/*'
 #   :command: yarn build:styles
